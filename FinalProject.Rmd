@@ -1,0 +1,398 @@
+---
+title: "Data Analysis of Hulu and Netflix Statistics - Matt Aribowo (Rmarkdown)"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(scales)
+library(fivethirtyeight)
+library(ggthemes)
+library(ggrepel)
+library(extrafont)
+library(readxl)
+
+library(ggthemr)
+library(tvthemes)
+library(ggtech)
+library(ggpomological)
+library(bbplot)
+library(magick)
+
+netflix_titles_4 <- read_excel("netflix_titles 4.xlsx", skip = 1)
+HuluRaw <- read_excel("HuluRaw.xlsx", skip = 1)
+netflix <- netflix_titles_4 %>%
+  separate(listed_in, into = c("genre1", "genre2", "genre3", "genre4"), sep = ",", extra = "merge")
+X1Netflix_Ratings <- read_excel("Netflix Ratings.xlsx", skip = 1)
+netflix <- netflix %>%
+separate(country, into = c("country1", "country2", "country3"), sep = ",", extra = "merge")
+
+HuluData <- HuluRaw[ -c(1,4:6,10:14) ]
+```
+
+
+```{r}
+X1Netflix_Ratings <- X1Netflix_Ratings %>%
+  drop_na(rating) %>%
+  drop_na(User_Rating) %>%
+  mutate(ratings_combine = case_when(
+    rating == "TV-Y" ~ "G",
+    rating == "TV-G" ~ "G",
+    rating == "TV-Y7-FV" ~ "PG",
+    rating == "TV-Y7" ~ "PG",
+    rating == "TV-PG" ~ "PG",
+    rating == "TV-14" ~ "PG-13",
+    rating == "TV-MA" ~ "R",
+    rating == "UR" ~ "NR",
+    TRUE ~ rating
+  )) %>%
+  mutate(User_Rating = parse_number(User_Rating))
+
+NetflixYear <- X1Netflix_Ratings %>%
+  drop_na(year, ratings_combine) %>%
+  filter(ratings_combine != "NR") %>%
+  group_by(ratings_combine) %>%
+  summarize(meanyear = mean(year), n = n()) %>%
+  arrange(desc(n))
+
+NetflixYearAvg <- X1Netflix_Ratings %>%
+  drop_na(year, User_Rating) %>%
+  filter(year != 1940) %>%
+  group_by(year) %>%
+  summarize(meanratingnet = mean(User_Rating), n = n()) %>%
+  arrange(desc(n))
+```
+
+
+
+```{r}
+rating_bar <- netflix %>%
+  group_by(rating) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n)) %>%
+  slice(1:5)
+
+topcountries <- netflix %>%
+  drop_na(country1) %>%
+  group_by(country1) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n)) %>%
+  slice(1:5)
+
+topgenres <- netflix %>%
+  drop_na(genre1) %>%
+  group_by(genre1) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n)) %>%
+  slice(1:5)
+
+
+netflix <- netflix %>%
+  mutate(rating_combine = case_when(
+    rating == "TV-Y" ~ "G",
+    rating == "TV-Y7" ~ "PG",
+    rating == "TV-PG" ~ "PG",
+    rating == "TV-Y7-FV" ~ "PG",
+    rating == "UR" ~ "NR",
+    rating == "TV-14" ~ "PG-13",
+    rating == "TV-MA" ~ "R",
+    rating == "NC-17" ~ "R",
+    rating == "TV-G" ~ "G",
+    TRUE ~ rating
+  ))
+```
+
+
+```{r}
+mean(netflix$release_year)
+mean(NetflixYearAvg$meanratingnet)
+mean(HuluData$`User Rating`)
+```
+
+
+
+```{r}
+HuluData %>%
+  group_by(Genre) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+
+topcompany <- HuluData %>%
+  group_by(Company) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n)) %>%
+  slice(1:7)
+
+HuluData <- HuluData %>%
+  mutate(huluratings = case_when(
+    `TV Rating` == "TV-Y" ~ "TV-G",
+    `TV Rating` == "TV-Y7" ~ "TV-PG",
+    `TV Rating` == "TV-Y7-FV" ~ "TV-PG",
+    `TV Rating` == "PG" ~ "TV-PG",
+    TRUE ~ `TV Rating`
+  )) %>%
+  drop_na(huluratings)
+
+averagerate <- HuluData %>%
+  drop_na(Company, `User Rating`) %>%
+  group_by(Company) %>%
+  summarize(meanrating = mean(`User Rating`), n = n()) %>%
+  arrange(desc(n)) %>%
+  slice(1:5)
+
+genrerate <- HuluData %>%
+  drop_na(Genre, `User Rating`) %>%
+  group_by(Genre) %>%
+  summarize(meanrating = mean(`User Rating`), n = n()) %>%
+  arrange(desc(n)) %>%
+  slice(1:5)
+
+topHulugenres <- HuluData %>%
+  drop_na(Genre) %>%
+  group_by(Genre) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n)) %>%
+  slice(1:5)
+
+topcompany <- topcompany %>%
+  mutate(Company = as_factor(Company)) %>%
+  mutate(Company = fct_reorder(Company, n))
+
+topHulugenres <- topHulugenres %>%
+  mutate(Genre = as_factor(Genre)) %>%
+  mutate(Genre = fct_reorder(Genre, n))
+
+genrerate <- genrerate %>%
+  mutate(Genre = as_factor(Genre)) %>%
+  mutate(Genre = fct_reorder(Genre, meanrating))
+
+averagerate <- averagerate %>%
+  mutate(Company = as_factor(Company)) %>%
+  mutate(Company = fct_reorder(Company, meanrating))
+
+newrate <- HuluData %>%
+  group_by(huluratings) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n)) %>%
+  mutate(huluratings = fct_relevel(huluratings, "TV-G", "TV-PG", "TV-14", "TV-MA")) %>%
+  filter(huluratings != "Not Rated")
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+topcompany %>%
+  ggplot(aes(Company, n, n)) +
+  geom_col(aes(fill = n)) +
+  scale_fill_gradient2(low = "darkseagreen3", high = "palegreen3") +
+  coord_flip() +
+  labs(title = "Top Companies vs. Shows in Top 1000", x = "Company", y = "Shows in Hulu's Top 1000", caption = ("Produced by: Matt Aribowo")) +
+  theme(plot.title = element_text(size = 20.3, hjust = .5, color = "palegreen3", face = "bold"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text = element_text(size = 11.5), axis.title = element_text(size = 14, face = "bold"), plot.caption = element_text(face = "italic", size = 11, hjust = 1.28)) +
+  theme(plot.background = element_rect(fill = "gray99"))
+
+
+ggplot(data = topHulugenres) +
+  geom_col(mapping = aes(x = Genre, y = n), fill= "palegreen3")+
+   labs(title = "Top 5 Genres on Hulu", x = "Genre", y = "Count", caption = ("Produced by: Matt Aribowo")) +
+  theme_wsj() +
+  scale_colour_wsj("colors6") +
+  theme(plot.title = element_text(size = 25, hjust = .5, face = "bold"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text = element_text(size = 7.2), axis.title = element_text(size = 19), plot.caption = element_text(face = "italic", size = 11))  
+
+HuluData %>%
+  filter(Seasons != 0, Episodes != 0) %>%
+  ggplot() +
+  geom_freqpoly(mapping = aes(Seasons)) +
+  theme_pomological_fancy() +  labs(title = "Top 1000 Shows Season Count - Hulu", x= "Seasons",y = "Show Count", caption = ("Produced by: Matt Aribowo")) + 
+  annotate("text", x = 26, y = 39, label = "Bleach (24)", face = "italic", family = "Roboto", size=4) +
+  annotate("text", x = 20.5, y = 49, label = "South Park (20)", face = "italic", family = "Roboto", size=4) +
+   annotate("text", x = 15, y = 36, label = "Top Chef (14)", face = "italic", family = "Roboto", size=4) +
+   annotate("text", x = 10.5, y = 68, label = "Rugrats (9)", face = "italic", family = "Roboto", size=4) +
+  annotate("text", x = 5.6, y = 195, label = "The Bachelorette (1)", face = "italic", family = "Roboto", size=4) +
+  annotate("text", x = 7.5, y = 158, label = "Drake & Josh (4)", face = "italic", family = "Roboto", size=4)+
+  annotate("text", x = 21.8, y = 190, label = "20% of shows have only 1 season", face = "italic",face= "bold", family = "Carlito", size=4.25)+
+  annotate("text", x = 22.5, y = 170, label = "60% of shows have 5 seasons or less!", face = "italic", family = "Carlito", size=4.25)+
+  theme(plot.title = element_text(size = 24, hjust = .5, color = "palegreen3", face = "bold", family = "Carlito"), axis.text = element_text(size = 11.39), axis.title = element_text(size = 17, family = "Comfortaa"), plot.caption = element_text(size=11, face="italic")) +
+  annotate("segment", x = 25.9, xend = 26.1, y = 13, yend = 29, colour = "black", size = .7, alpha = 0.9) +
+  annotate("segment", x = 14.5, xend = 14.7, y = 7, yend = 26, colour = "black", size = .7, alpha = 0.9)+
+  annotate("segment", x = 19.6, xend = 20, y = 11, yend = 39, colour = "black", size = .7, alpha = 0.9) +
+  annotate("segment", x = 8.85, xend = 9.4, y = 39, yend = 57, colour = "black", size = .7, alpha = 0.9) +
+   annotate("segment", x = 4.39, xend = 4.79, y = 134, yend = 149, colour = "black", size = .7, alpha = 0.9) +
+   annotate("segment", x = 1.15, xend = 2, y = 199, yend = 195, colour = "black", size = .7, alpha = 0.7)
+
+
+ggplot(data = newrate, aes(huluratings, n, n)) +
+  geom_col(aes(fill = n)) +
+  xlab("ESRB Rating") +
+  ylab("Shows in Top 1000") +
+  ggtitle("Rating vs. Shows in Top 1000") +
+  scale_fill_gradient2(low = "palegreen2",high = "palegreen3") +
+  labs(caption = ("Produced by: Matt Aribowo")) +
+  theme(plot.title = element_text(size = 22.3, hjust = .5, color = "palegreen4", face = "bold", family = "Comfortaa"), axis.text = element_text(size = 11.39), axis.title = element_text(size = 17, family = "Comfortaa"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), plot.caption = element_text(face = "italic", size = 11,hjust = 1.22)) +annotate("text", x = 3, y = 525, label = "60%", face = "bold", family = "Comfortaa", size=8.4)  +
+  theme(plot.background = element_rect(fill = "darkseagreen1")) +
+  theme(panel.background = element_rect(fill=("gray99")))
+  
+
+ggplot(genrerate, aes(x = Genre, y = meanrating, group = 1)) +
+  geom_point(stat = "summary", fun.y = sum, color = "black", size = 3.5) +
+  stat_summary(fun.y = sum, geom = "line", color = "palegreen3", size = 2) +
+  labs(title = "Genre vs. Average User Rating - Hulu", x = "Genre", y = "Average User Rating", caption = ("Produced by: Matt Aribowo")) +
+  theme(plot.title = element_text(size = 22.3, hjust = .5, color = "palegreen3", face = "bold", family = "Comfortaa"), axis.text = element_text(size = 11.39), axis.title = element_text(size = 17, family = "Comfortaa"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), plot.caption = element_text(face = "italic", size = 11)) +
+  theme(plot.background = element_rect(fill = "gray99")) +
+  theme(panel.background = element_rect(fill = "gray96")) +
+  annotate("text", x = 5, y = 4.51, label = "4.45 / 5", face = "bold") +
+  annotate("text", x = 1, y = 3.797, label = "3.72 / 5", face = "bold")
+
+
+
+ggplot(averagerate, aes(x = Company, y = meanrating, group = 1)) +
+  geom_point(stat = "summary", fun.y = sum) +
+  stat_summary(fun.y = sum, geom = "line") + bbc_style() +
+   labs(title = "Company vs. Average User Rating - Hulu", x = "Company", y = "Average User Rating", caption = ("Produced by: Matt Aribowo")) +
+  geom_label(aes(label=round(meanrating, digits = 2), vjust = -.5))+ 
+  annotate("text", x = 1, y = 4.45, label = "4.45 / 5", face = "bold", color = "gray96") +
+   theme(plot.background = element_rect(fill = "gray99")) +
+  theme(panel.background = element_rect(fill = "gray96"))+
+   theme(plot.title = element_text(size = 22.3, hjust = .5, color = "palegreen3", face = "bold", family = "Comfortaa"), axis.text = element_text(size = 11.39), axis.title = element_text(size = 17, family = "Comfortaa"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), plot.caption = element_text(face = "italic", size = 11, hjust = 1))  
+```
+
+
+
+
+
+
+
+```{r}
+X1Netflix_Ratings %>%
+  group_by(ratings_combine) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+
+
+X1Netflix_Ratings %>%
+  filter(ratings_combine != "NR") %>%
+  ggplot() +
+  geom_boxplot(mapping = aes(x = ratings_combine, y = User_Rating), color = "black", fill = "firebrick3", alpha = 0.44) +
+  labs(title = "ESRB Rating vs. Average User Rating", x = "ESRB Rating", y = "Average User Rating", caption = ("Produced by: Matt Aribowo")) +
+  theme_economist() +
+  scale_fill_economist() +
+  theme(plot.title = element_text(hjust = .5, size = 15), plot.caption = element_text(face = "italic", size = 9.5), axis.text = element_text(size = 13), axis.title = element_text(size = 14)) +
+  annotate("text", x = 4, y = 94.8, label = "93.2", face = "bold") +
+  annotate("text", x = 1, y = 78.755, label = "77.2")
+
+
+ggplot(NetflixYearAvg, aes(x = year, y = meanratingnet, group = 1)) +
+  geom_point(stat = "summary", fun.y = sum) +
+  geom_smooth(method = lm, color = "indianred2") +
+  labs(title = "Show Year vs. Average User Rating - Netflix", x = "Release Year", y = "Average User Rating", caption = ("Produced by: Matt Aribowo")) +
+  theme(plot.title = element_text(size = 19.7, hjust = .5, color = "indianred3", face = "bold"), axis.text = element_text(size = 11), axis.title = element_text(size = 13, face = "bold"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), plot.caption = element_text(face = "italic", size = 11)) +
+  stat_summary(fun.y = sum) +
+  geom_text_repel(aes(label = year), size = 3) +
+  annotate("segment", x = 1982.7, xend = 1986.3, y = 57.4, yend = 57.4, colour = "black", size = .23, alpha = 0.9, arrow = arrow()) +
+  annotate("text", label = "1987 worst avg. with 58.3", x = 1982.4, y = 59.64, colour = "black", size = 3) +
+  theme(plot.background = element_rect(fill = "gray98"))
+
+
+
+ggplot(NetflixYear, aes(x = ratings_combine, y = meanyear, group = 1)) +
+  labs(title = "ESRB Ratings vs. Average Year - Netflix", x = "ESRB Rating", y = "Average Year Release", caption = ("Produced by: Matt Aribowo")) +
+  geom_point(stat = "summary", fun.y = sum, size = 3.9, color = "gray30") +
+  stat_summary(fun.y = sum, geom = "line", color = "firebrick2", size = 1.7) +
+  theme_classic() +
+  theme(plot.title = element_text(size = 18, hjust = .5, family = "Comfortaa", face = "bold"), axis.text = element_text(size = 13), axis.title = element_text(size = 14), plot.caption = element_text(face = "italic", size = 11)) +
+  annotate("text", x = 4, y = 2014.7, label = "2015.4") +
+  annotate("text", x = 1.26, y = 2004.3, label = "2004.5") +
+  annotate("text", x = 3.2, y = 2006, label = "11 Year difference in avg. year, between Rated G and R!", colour = "gray30", fontface = 2) +
+  theme(plot.background = element_rect(fill = "gray99")) +
+  theme(panel.background = element_rect(fill = "mintcream"))
+```
+
+
+
+
+```{r}
+netflix %>%
+  group_by(country1) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+
+netflix %>%
+  group_by(genre1) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+```
+
+
+
+
+```{r}
+topcountries <- topcountries %>%
+  mutate(country1 = as_factor(country1)) %>%
+  mutate(country1 = fct_reorder(country1, n))
+
+topgenres <- topgenres %>%
+  mutate(genre1 = as_factor(genre1)) %>%
+  mutate(genre1 = fct_reorder(genre1, n))
+
+NetflixMovTv1 <- netflix %>%
+  drop_na(type, rating_combine) %>%
+  filter(rating_combine != "NR") %>%
+  count(type, rating_combine) %>%
+  group_by(rating_combine)
+
+ggplot(NetflixMovTv1, aes(x = rating_combine, y = n, fill = type)) +
+  geom_bar(position = "dodge", stat = "identity")
+```
+
+
+
+
+```{r}
+ggplot(data = netflix) +
+  geom_bar(mapping = aes(x = type, fill = type)) +
+  scale_fill_manual(values = c("orangered4", "orangered2")) +
+  labs(title = "//       Movie vs. TV Series Count - Netflix       \\\\", x = "Show Type", y = "Count", caption = ("Produced by: Matt Aribowo")) +
+  theme(plot.title = element_text(size = 19, hjust = .5, color = "red3", face = "bold"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text = element_text(size = 13), axis.title = element_text(size = 16), plot.caption = element_text(face = "italic", size = 11, hjust = 1.32)) +
+  annotate("text", x = 1, y = 3200, color = "white", label = "68%", size = 9) +
+  annotate("text", x = 2, y = 1100, color = "white", label = "32%", size = 9) +
+  theme(plot.background = element_rect(fill = "gray98"))
+
+
+
+ggplot(data = netflix) +
+  geom_density(mapping = aes(x = release_year), fill = "indianred2") +
+  xlim(1980, 2019) +
+  annotate("segment", x = 2014.9, xend = 2017.5, y = .166, yend = .166, colour = "black", size = .7, alpha = 0.9) +
+  annotate("text", x = 2013, y = .165, label = "2018", size = 5.1) +
+  labs(title = "Density Plot of Movies + TV based on Release Year", x = "Release Year", y = "Proportion", caption = ("Produced by: Matt Aribowo")) +
+  theme(plot.title = element_text(size = 19, hjust = .5, color = "indianred4"), panel.grid.major = element_blank(), axis.text = element_text(size = 11), axis.title = element_text(size = 13), plot.caption = element_text(face = "italic", size = 11)) +
+  theme(plot.background = element_rect(fill = "gray98"))
+
+
+topcountries %>%
+  ggplot(aes(country1, n, n)) +
+  geom_col(aes(fill = n)) +
+  scale_fill_gradient2(low = "lightcoral", high = "indianred3") +
+  labs(title = "Top 5 Countries Producing Content on Netflix", x = "Genre", y = "Count", caption = ("Produced by: Matt Aribowo")) +
+  theme(plot.title = element_text(size = 19, hjust = .5, color = "indianred4", face = "bold"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text = element_text(size = 9.9), axis.title = element_text(size = 16), plot.caption = element_text(face = "italic", size = 11, hjust = 1.23)) +
+  annotate("text", x = 5, y = 2000, label = "U.S") +
+  annotate("text", x = 2.44, y = 2040, label = "The United States produces only 40% of all movies/series on Netflix.", size = 3.4) +
+  annotate("segment", x = 2, xend = 4.3, y = 1700, yend = 1800, colour = "indianred1", size = 3, alpha = 0.6, arrow = arrow()) +
+  theme(plot.background = element_rect(fill = "gray98"))
+
+
+
+ggplot(data = topgenres) +
+  geom_col(mapping = aes(x = genre1, y = n), fill = "indianred2") +
+  labs(title = "Top 5 Genres on Netflix", x = "Genre", y = "Count", caption = ("Produced by: Matt Aribowo")) +
+  theme_wsj() +
+  scale_colour_wsj("colors6") +
+  theme(plot.title = element_text(size = 25, hjust = .5, face = "bold"), panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.text = element_text(size = 8.6), axis.title = element_text(size = 16), plot.caption = element_text(face = "italic", size = 11))
+```
